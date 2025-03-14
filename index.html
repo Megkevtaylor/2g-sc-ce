@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voiceflow AI Chat</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #transcript {
+            padding: 10px;
+            margin: 10px 0;
+            color: #34495e;
+            font-size: 16px;
+            min-height: 24px;
+        }
+        .status {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .chat-container {
+            width: 100%;
+            height: 70vh;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Voice Chat with Voiceflow</h1>
+        <div class="controls">
+            <button id="listenButton" onclick="toggleListening()">Start Talking</button>
+            <div class="status" id="status"></div>
+            <p id="transcript"></p>
+        </div>
+        <div class="chat-container">
+            <iframe
+                src="https://www.tixaeagents.ai/app/na/render/kpSwF3yhLpM11W1/iframe"
+                frameborder="0">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isListening = false;
+        const synth = window.speechSynthesis;
+        const listenButton = document.getElementById('listenButton');
+        const statusDiv = document.getElementById('status');
+
+        function toggleListening() {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!("webkitSpeechRecognition" in window)) {
+                alert("Your browser does not support speech recognition. Please try using Chrome!");
+                return;
+            }
+
+            if (!recognition) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = "en-US";
+
+                recognition.onstart = () => {
+                    console.log("Listening...");
+                    isListening = true;
+                    listenButton.textContent = "Stop Listening";
+                    listenButton.style.backgroundColor = "#dc3545";
+                    statusDiv.textContent = "Listening...";
+                };
+
+                recognition.onend = () => {
+                    console.log("Stopped listening");
+                    isListening = false;
+                    listenButton.textContent = "Start Talking";
+                    listenButton.style.backgroundColor = "#4CAF50";
+                    statusDiv.textContent = "";
+                };
+
+                recognition.onresult = (event) => {
+                    const text = event.results[0][0].transcript;
+                    document.getElementById("transcript").textContent = "You said: " + text;
+                    sendMessageToVoiceflow(text);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error:", event.error);
+                    statusDiv.textContent = "Error: " + event.error;
+                    isListening = false;
+                    listenButton.textContent = "Start Talking";
+                    listenButton.style.backgroundColor = "#4CAF50";
+                };
+            }
+
+            recognition.start();
+        }
+
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        function sendMessageToVoiceflow(userInput) {
+            // Send message to Voiceflow iframe
+            const iframe = document.querySelector('iframe');
+            iframe.contentWindow.postMessage({
+                type: "message",
+                payload: userInput
+            }, "*");
+        }
+
+        // Handle messages from Voiceflow
+        window.addEventListener('message', (event) => {
+            // Add any specific handling for messages from Voiceflow here
+            console.log('Received message from Voiceflow:', event.data);
+        });
+    </script>
+</body>
+</html> 
