@@ -79,13 +79,14 @@
     <div class="container">
         <h1>AI Voice Chat with Voiceflow</h1>
         <div class="controls">
-            <button id="listenButton" onclick="toggleListening()">Start Talking</button>
+            <button id="listenButton" onclick="requestPermissionAndListen()">Start Talking</button>
             <div class="status" id="status"></div>
             <p id="transcript"></p>
         </div>
         <div class="chat-container">
             <iframe
                 src="https://www.tixaeagents.ai/app/na/render/kpSwF3yhLpM11W1/iframe"
+                allow="microphone"
                 frameborder="0">
             </iframe>
         </div>
@@ -97,6 +98,21 @@
         const synth = window.speechSynthesis;
         const listenButton = document.getElementById('listenButton');
         const statusDiv = document.getElementById('status');
+
+        async function requestPermissionAndListen() {
+            try {
+                // First request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop()); // Stop the stream after getting permission
+                
+                // After getting permission, toggle listening
+                toggleListening();
+            } catch (err) {
+                console.error('Microphone permission error:', err);
+                statusDiv.textContent = "Error: Microphone permission denied. Please allow microphone access.";
+                statusDiv.style.color = "#dc3545";
+            }
+        }
 
         function toggleListening() {
             if (isListening) {
@@ -124,6 +140,7 @@
                     listenButton.textContent = "Stop Listening";
                     listenButton.style.backgroundColor = "#dc3545";
                     statusDiv.textContent = "Listening...";
+                    statusDiv.style.color = "#4CAF50";
                 };
 
                 recognition.onend = () => {
@@ -143,6 +160,7 @@
                 recognition.onerror = (event) => {
                     console.error("Speech recognition error:", event.error);
                     statusDiv.textContent = "Error: " + event.error;
+                    statusDiv.style.color = "#dc3545";
                     isListening = false;
                     listenButton.textContent = "Start Talking";
                     listenButton.style.backgroundColor = "#4CAF50";
@@ -171,6 +189,13 @@
         window.addEventListener('message', (event) => {
             // Add any specific handling for messages from Voiceflow here
             console.log('Received message from Voiceflow:', event.data);
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isListening) {
+                stopListening();
+            }
         });
     </script>
 </body>
